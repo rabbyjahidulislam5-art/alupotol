@@ -15,7 +15,7 @@ router.post('/2fa/verify', validate(verify2FASchema), requirePartialAuth, contro
 router.post('/refresh', refreshAccessToken, controller.refresh.bind(controller));
 router.post('/logout', authenticate, controller.logout.bind(controller));
 router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), controller.forgotPassword.bind(controller));
-router.post('/reset-password', validate(resetPasswordSchema), controller.resetPassword.bind(controller));
+router.post('/reset-password', validate(resetPasswordSchema), requirePartialAuth, controller.resetPassword.bind(controller));
 router.post('/setup-2fa', authenticate, controller.setup2FA.bind(controller));
 router.post('/enable-2fa', authenticate, validate(verify2FASchema), controller.enable2FA.bind(controller));
 router.post('/kyc/upload', authenticate, controller.uploadKYC.bind(controller));

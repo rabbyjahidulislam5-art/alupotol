@@ -45,7 +45,7 @@ export const config = {
       user: process.env.SMTP_USER || '',
       pass: process.env.SMTP_PASS || '',
     },
-    from: process.env.EMAIL_FROM || 'noreply@smartcampus.ewu.edu.bd',
+    from: process.env.EMAIL_FROM || process.env.SMTP_USER || 'noreply@smartcampus.ewu.edu.bd',
   },
   sms: {
     gateway: process.env.SMS_GATEWAY || 'sslcommerz',

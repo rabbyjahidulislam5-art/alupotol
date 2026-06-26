@@ -194,37 +194,62 @@ export class AuthController {
   async forgotPassword(req: Request, res: Response) {
     const { email } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return success(res, { message: 'If the email exists, a reset link has been sent' });
+    // Always return success to avoid email enumeration
+    if (!user) return success(res, { message: 'If the email exists, a reset code has been sent' });
 
-    const resetToken = generateToken();
+    const otp = (!config.email.smtp.user || !config.email.smtp.pass) ? '123456' : generateOTP();
+    const otpHash = hashOTP(otp);
+
     await prisma.oTPRecord.create({
       data: {
         userId: user.id,
-        otpHash: require('crypto').createHash('sha256').update(resetToken).digest('hex'),
+        otpHash,
         purpose: 'PASSWORD_RESET',
-        expiresAt: new Date(Date.now() + 3600000), // 1 hour
+        expiresAt: new Date(Date.now() + config.otp.expiryMs),
       },
     });
 
-    // In production send email with reset link
-    success(res, { message: 'Password reset email sent' });
+    await sendOTPEmail(email, otp);
+
+    const resetToken = jwt.sign(
+      { sub: user.id, role: 'RESET', sessionId: 'password-reset' },
+      config.jwt.accessTokenSecret,
+      { expiresIn: '30m' }
+    );
+
+    success(res, { message: 'Password reset code sent to your email', token: resetToken });
   }
 
   // POST /api/v1/auth/reset-password
-  async resetPassword(req: Request, res: Response) {
-    const { token, password } = req.body;
-    const tokenHash = require('crypto').createHash('sha256').update(token).digest('hex');
+  async resetPassword(req: AuthRequest, res: Response) {
+    const { otp, password } = req.body;
+    const userId = req.user?.id;
+    if (!userId) return error(res, 'UNAUTHORIZED', 'Auth required', 401);
 
     const record = await prisma.oTPRecord.findFirst({
-      where: { otpHash: tokenHash, purpose: 'PASSWORD_RESET', usedAt: null, expiresAt: { gt: new Date() } },
+      where: { userId, purpose: 'PASSWORD_RESET', usedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
     });
-    if (!record) return error(res, 'INVALID_TOKEN', 'Invalid or expired reset token', 400);
+    if (!record) return error(res, 'OTP_EXPIRED', 'No valid OTP found. Please request a new one.', 400);
+
+    if (record.attemptCount >= config.otp.maxAttempts) {
+      await prisma.oTPRecord.update({ where: { id: record.id }, data: { usedAt: new Date() } });
+      return error(res, 'OTP_BLOCKED', 'Too many attempts. Please request a new OTP.', 429);
+    }
+
+    const isMatch = hashOTP(otp) === record.otpHash;
+    await prisma.oTPRecord.update({
+      where: { id: record.id },
+      data: { attemptCount: { increment: 1 } },
+    });
+
+    if (!isMatch) return error(res, 'OTP_INVALID', 'Invalid OTP. Please try again.', 400);
 
     const passwordHash = await hashPassword(password);
-    await prisma.user.update({ where: { id: record.userId }, data: { passwordHash } });
+    await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
     await prisma.oTPRecord.update({ where: { id: record.id }, data: { usedAt: new Date() } });
 
-    await revokeAllSessions(record.userId);
+    await revokeAllSessions(userId);
     success(res, { message: 'Password reset successfully' });
   }
 
