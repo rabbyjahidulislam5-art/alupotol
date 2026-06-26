@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: smart-campus-api
+    env: docker
+    region: singapore
+    rootDir: .
+    dockerfilePath: backend/Dockerfile
+    buildCommand: ''
+    startCommand: ''
+    envVars:
+      - key: DATABASE_URL
+        value: ${DATABASE_URL}
+      - key: REDIS_URL
+        value: ${REDIS_URL}
+      - key: JWT_ACCESS_SECRET
+        value: K7gV8fR2sL9xQ4cZ1nU3aE5bW6hY0oJp
+      - key: JWT_REFRESH_SECRET
+        value: Z1sX3pT5vW9yQ2cL8rN0dK6fG4mH7jB2
+      - key: OTP_HMAC_SECRET
+        value: A3bC5dE7fG9hJ1kL2mN4pQ6rS8tU0vW9
+      - key: QR_SIGNING_SECRET
+        value: R2tU5vX8zC1eK4mN7pQ0sV3yW6bZ9dF2
+      - key: NODE_ENV
+        value: production
