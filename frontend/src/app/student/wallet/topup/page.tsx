@@ -49,7 +49,7 @@ export default function TopUpPage() {
           </div>
           <div className="grid grid-cols-3 gap-2">
             {presets.map(p => (
-              <button key={p} onClick={() => setAmount(String(p))} className={`py-2 rounded-lg text-sm font-medium border transition-all ${amount === String(p) ? 'border-blue-600 bg-blue-50 text-blue-600' : 'border-gray-200 hover:border-blue-300'}`}>
+              <button key={p} onClick={() => setAmount(String(p))} className={`py-2 rounded-lg text-sm font-semibold border transition-all ${amount === String(p) ? 'border-indigo-600 bg-indigo-50 text-indigo-600 font-bold' : 'border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}>
                 ৳{p}
               </button>
             ))}
@@ -60,14 +60,14 @@ export default function TopUpPage() {
           <label className="text-sm font-medium text-gray-700 block mb-3">Payment Method</label>
           <div className="space-y-3">
             {[
-              { key: 'bkash', label: 'bKash', icon: '📱', color: 'bg-pink-50 border-pink-200' },
-              { key: 'nagad', label: 'Nagad', icon: '📱', color: 'bg-orange-50 border-orange-200' },
-              { key: 'sslcommerz', label: 'Card Payment', icon: '💳', color: 'bg-blue-50 border-blue-200' },
+              { key: 'bkash', label: 'bKash', icon: '📱', color: 'bg-pink-50/50 border-pink-100 hover:bg-pink-50' },
+              { key: 'nagad', label: 'Nagad', icon: '📱', color: 'bg-orange-50/50 border-orange-100 hover:bg-orange-50' },
+              { key: 'sslcommerz', label: 'Card Payment', icon: '💳', color: 'bg-indigo-50/30 border-indigo-100 hover:bg-indigo-50/60' },
             ].map(g => (
-              <label key={g.key} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${gateway === g.key ? 'border-blue-600 bg-blue-50' : g.color}`}>
-                <input type="radio" name="gateway" value={g.key} checked={gateway === g.key} onChange={e => setGateway(e.target.value)} className="accent-blue-600" />
+              <label key={g.key} className={`flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${gateway === g.key ? 'border-indigo-600 bg-indigo-50' : g.color}`}>
+                <input type="radio" name="gateway" value={g.key} checked={gateway === g.key} onChange={e => setGateway(e.target.value)} className="accent-indigo-600" />
                 <span className="text-xl">{g.icon}</span>
-                <span className="text-sm font-medium">{g.label}</span>
+                <span className="text-sm font-semibold">{g.label}</span>
               </label>
             ))}
           </div>

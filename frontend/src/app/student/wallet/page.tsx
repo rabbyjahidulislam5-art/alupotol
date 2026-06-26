@@ -78,9 +78,9 @@ export default function WalletPage() {
 
       <div className="flex justify-center gap-6 mb-6">
         {actionBtns.map(b => (
-          <Link key={b.href} href={b.href} className="flex flex-col items-center gap-2">
-            <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-2xl hover:bg-blue-100 transition-colors">{b.icon}</div>
-            <span className="text-xs font-medium text-gray-600">{b.label}</span>
+          <Link key={b.href} href={b.href} className="flex flex-col items-center gap-2.5 group">
+            <div className="w-14 h-14 rounded-full bg-indigo-50/80 flex items-center justify-center text-2xl group-hover:bg-indigo-100/80 transition-all shadow-sm hover:shadow group-hover:-translate-y-0.5 active:translate-y-0">{b.icon}</div>
+            <span className="text-xs font-semibold text-gray-600">{b.label}</span>
           </Link>
         ))}
       </div>

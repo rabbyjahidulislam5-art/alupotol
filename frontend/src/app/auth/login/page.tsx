@@ -40,7 +40,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-800 to-blue-600 flex items-center justify-center text-white font-bold text-lg mx-auto mb-4">SC</div>
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-extrabold text-lg mx-auto mb-4 shadow-md shadow-indigo-100 animate-pulse-glow">SC</div>
           <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
           <p className="text-gray-500 text-sm mt-1">Login to Smart Campus App</p>
         </div>

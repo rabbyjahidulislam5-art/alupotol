@@ -69,7 +69,7 @@ export default function VerifyOTPPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm text-center">
-        <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-6">
+        <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center mx-auto mb-6 shadow-sm">
           <span className="text-3xl">📧</span>
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Verify OTP</h1>
@@ -80,7 +80,7 @@ export default function VerifyOTPPage() {
         <div className="flex justify-center gap-3 mb-6" onPaste={handlePaste}>
           {otp.map((digit, i) => (
             <input key={i} ref={el => { inputRefs.current[i] = el; }}
-              className="w-12 h-14 text-center text-xl font-bold border-2 border-gray-200 rounded-xl focus:border-blue-600 focus:outline-none transition-colors"
+              className="w-12 h-14 text-center text-xl font-bold border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none transition-all shadow-sm focus:shadow-indigo-100"
               type="text" inputMode="numeric" maxLength={1} value={digit}
               onChange={e => handleChange(i, e.target.value)}
               onKeyDown={e => handleKeyDown(i, e)}
@@ -89,13 +89,13 @@ export default function VerifyOTPPage() {
           ))}
         </div>
 
-        <button className="btn btn-primary w-full btn-lg" onClick={handleSubmit} disabled={loading || otp.join('').length < 6}>
+        <button className="btn btn-primary w-full btn-lg animate-fade-in" onClick={handleSubmit} disabled={loading || otp.join('').length < 6}>
           {loading ? <span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> : 'Verify'}
         </button>
 
         <p className="text-sm text-gray-500 mt-6">
           {countdown > 0 ? `Resend in ${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}` :
-            <button className="text-blue-600 font-medium" onClick={handleResend} disabled={resending}>
+            <button className="text-indigo-600 font-semibold hover:text-indigo-700" onClick={handleResend} disabled={resending}>
               {resending ? 'Sending...' : 'Resend OTP'}
             </button>}
         </p>

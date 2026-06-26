@@ -54,18 +54,18 @@ export default function StudentDashboard() {
         <KPICard title="Advising" value={data?.advisingStatus || 'N/A'} icon="🎓" color={isHold ? 'red' : 'green'} />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         {[
-          { icon: '➕', label: 'Top Up', href: '/student/wallet/topup', color: 'bg-blue-50 text-blue-700' },
-          { icon: '📋', label: 'Pay Fines', href: '/student/fines', color: 'bg-red-50 text-red-700' },
-          { icon: '📊', label: 'Ledger', href: '/student/ledger', color: 'bg-green-50 text-green-700' },
-          { icon: '📷', label: 'QR Pay', href: '/student/qr-pay', color: 'bg-purple-50 text-purple-700' },
-          { icon: '🎓', label: 'Advising', href: '/student/advising', color: 'bg-amber-50 text-amber-700' },
-          { icon: '💬', label: 'Support', href: '/student/support', color: 'bg-indigo-50 text-indigo-700' },
+          { icon: '➕', label: 'Top Up', href: '/student/wallet/topup', color: 'bg-indigo-50/80 text-indigo-700 hover:bg-indigo-100/80' },
+          { icon: '📋', label: 'Pay Fines', href: '/student/fines', color: 'bg-red-50/80 text-red-700 hover:bg-red-100/80' },
+          { icon: '📊', label: 'Ledger', href: '/student/ledger', color: 'bg-emerald-50/80 text-emerald-700 hover:bg-emerald-100/80' },
+          { icon: '📷', label: 'QR Pay', href: '/student/qr-pay', color: 'bg-purple-50/80 text-purple-700 hover:bg-purple-100/80' },
+          { icon: '🎓', label: 'Advising', href: '/student/advising', color: 'bg-amber-50/80 text-amber-700 hover:bg-amber-100/80' },
+          { icon: '💬', label: 'Support', href: '/student/support', color: 'bg-blue-50/80 text-blue-700 hover:bg-blue-100/80' },
         ].map(q => (
-          <Link key={q.href} href={q.href} className={`${q.color} rounded-xl p-4 flex flex-col items-center gap-2 hover:shadow-md transition-all`}>
+          <Link key={q.href} href={q.href} className={`${q.color} rounded-2xl p-5 flex flex-col items-center gap-2.5 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 border border-gray-100`}>
             <span className="text-2xl">{q.icon}</span>
-            <span className="text-sm font-medium">{q.label}</span>
+            <span className="text-sm font-semibold">{q.label}</span>
           </Link>
         ))}
       </div>
