@@ -1,8 +1,9 @@
 import { AuthRequest } from '../middleware/auth.middleware';
 import prisma from '../config/prisma';
 import { success, error, paginated } from '../utils/response';
-import { generateReferenceId } from '../utils/crypto';
+import { generateReferenceId, generateOTP, hashOTP } from '../utils/crypto';
 import { config } from '../config';
+import { sendOTPEmail } from '../utils/email';
 
 export class WalletController {
   // GET /api/v1/wallet/balance
@@ -12,14 +13,75 @@ export class WalletController {
     success(res, { balance: wallet.balance, pendingBalance: wallet.pendingBalance, heldBalance: wallet.heldBalance, status: wallet.status });
   }
 
+  // POST /api/v1/wallet/request-otp
+  async requestOTP(req: AuthRequest, res: any) {
+    const { purpose } = req.body;
+    if (!purpose || !['TRANSFER', 'WITHDRAWAL', 'QR_PAY', 'TOPUP'].includes(purpose)) {
+      return error(res, 'VALIDATION_ERROR', 'Invalid purpose for OTP', 400);
+    }
+    const userId = req.user!.id;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return error(res, 'NOT_FOUND', 'User not found', 404);
+
+    // Invalidate all previous unused OTPs for this purpose
+    await prisma.oTPRecord.updateMany({
+      where: { userId, purpose, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    const otp = generateOTP();
+    const otpHash = hashOTP(otp);
+
+    await prisma.oTPRecord.create({
+      data: {
+        userId,
+        otpHash,
+        purpose,
+        expiresAt: new Date(Date.now() + config.otp.expiryMs),
+      },
+    });
+
+    let devOtp: string | undefined = undefined;
+    let simulated = false;
+
+    try {
+      await sendOTPEmail(user.email, otp);
+      if (!config.email.smtp.user || !config.email.smtp.pass) {
+        devOtp = otp;
+        simulated = true;
+      }
+    } catch (emailErr: any) {
+      console.error('[EMAIL ERROR] Failed to send wallet transaction OTP:', emailErr);
+      devOtp = otp;
+      simulated = true;
+    }
+
+    success(res, {
+      message: `OTP sent successfully for ${purpose}`,
+      simulated,
+      devOtp,
+    });
+  }
+
   // POST /api/v1/wallet/topup/initiate
   async initiateTopUp(req: AuthRequest, res: any) {
-    const { amount, gateway } = req.body;
+    const { amount, gateway, otp } = req.body;
     const userId = req.user!.id;
 
     const wallet = await prisma.wallet.findUnique({ where: { userId } });
     if (!wallet) return error(res, 'NOT_FOUND', 'Wallet not found', 404);
     if (wallet.status !== 'ACTIVE') return error(res, 'WALLET_FROZEN', 'Wallet is not active', 403);
+
+    // OTP check for top-up
+    if (!otp) return error(res, 'OTP_REQUIRED', 'OTP verification required', 400);
+    const record = await prisma.oTPRecord.findFirst({
+      where: { userId, purpose: 'TOPUP', usedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!record || record.otpHash !== hashOTP(otp)) {
+      return error(res, 'OTP_INVALID', 'Invalid OTP', 400);
+    }
+    await prisma.oTPRecord.update({ where: { id: record.id }, data: { usedAt: new Date() } });
 
     // Check daily limit
     if (wallet.dailyTopupResetAt < new Date()) {
@@ -65,18 +127,16 @@ export class WalletController {
     if (wallet.balance < amount) return error(res, 'INSUFFICIENT_BALANCE', 'Insufficient wallet balance', 400);
     if (amount > config.wallet.singleTransferMax) return error(res, 'LIMIT_EXCEEDED', 'Single transfer limit exceeded', 400);
 
-    // OTP check for large transfers
-    if (amount > config.wallet.transferOtpThreshold) {
-      if (!otp) return error(res, 'OTP_REQUIRED', 'OTP required for transfers above ৳500', 400);
-      const record = await prisma.oTPRecord.findFirst({
-        where: { userId: senderId, purpose: 'TRANSFER', usedAt: null, expiresAt: { gt: new Date() } },
-        orderBy: { createdAt: 'desc' },
-      });
-      if (!record || record.otpHash !== (await import('../utils/crypto')).hashOTP(otp)) {
-        return error(res, 'OTP_INVALID', 'Invalid OTP', 400);
-      }
-      await prisma.oTPRecord.update({ where: { id: record.id }, data: { usedAt: new Date() } });
+    // OTP check for transfers
+    if (!otp) return error(res, 'OTP_REQUIRED', 'OTP required for transfer', 400);
+    const record = await prisma.oTPRecord.findFirst({
+      where: { userId: senderId, purpose: 'TRANSFER', usedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!record || record.otpHash !== hashOTP(otp)) {
+      return error(res, 'OTP_INVALID', 'Invalid OTP', 400);
     }
+    await prisma.oTPRecord.update({ where: { id: record.id }, data: { usedAt: new Date() } });
 
     const recipient = await prisma.user.findUnique({ where: { studentId: recipientStudentId } });
     if (!recipient || recipient.status !== 'ACTIVE') return error(res, 'RECIPIENT_NOT_FOUND', 'Recipient not found or inactive', 404);
@@ -136,18 +196,16 @@ export class WalletController {
     const wallet = await prisma.wallet.findUnique({ where: { userId } });
     if (!wallet || wallet.balance < payAmount) return error(res, 'INSUFFICIENT_BALANCE', 'Insufficient balance', 400);
 
-    // OTP for large QR payments
-    if (payAmount > config.wallet.qrPayOtpThreshold) {
-      if (!otp) return error(res, 'OTP_REQUIRED', 'OTP required for payments above ৳1,000', 400);
-      const record = await prisma.oTPRecord.findFirst({
-        where: { userId, purpose: 'QR_PAY', usedAt: null, expiresAt: { gt: new Date() } },
-        orderBy: { createdAt: 'desc' },
-      });
-      if (!record || record.otpHash !== (await import('../utils/crypto')).hashOTP(otp)) {
-        return error(res, 'OTP_INVALID', 'Invalid OTP', 400);
-      }
-      await prisma.oTPRecord.update({ where: { id: record.id }, data: { usedAt: new Date() } });
+    // OTP for QR payments
+    if (!otp) return error(res, 'OTP_REQUIRED', 'OTP required for QR payment', 400);
+    const record = await prisma.oTPRecord.findFirst({
+      where: { userId, purpose: 'QR_PAY', usedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!record || record.otpHash !== hashOTP(otp)) {
+      return error(res, 'OTP_INVALID', 'Invalid OTP', 400);
     }
+    await prisma.oTPRecord.update({ where: { id: record.id }, data: { usedAt: new Date() } });
 
     // Atomic QR payment
     const result = await prisma.$transaction(async (tx) => {
@@ -180,13 +238,24 @@ export class WalletController {
 
   // POST /api/v1/wallet/withdraw
   async withdraw(req: AuthRequest, res: any) {
-    const { amount, destination } = req.body;
+    const { amount, destination, otp } = req.body;
     const userId = req.user!.id;
 
     const wallet = await prisma.wallet.findUnique({ where: { userId } });
     if (!wallet) return error(res, 'NOT_FOUND', 'Wallet not found', 404);
     if (wallet.balance < amount) return error(res, 'INSUFFICIENT_BALANCE', 'Insufficient balance', 400);
     if (amount < config.wallet.withdrawalMin) return error(res, 'AMOUNT_TOO_LOW', `Minimum withdrawal is ৳${config.wallet.withdrawalMin / 100}`, 400);
+
+    // OTP for withdrawals
+    if (!otp) return error(res, 'OTP_REQUIRED', 'OTP required for withdrawal', 400);
+    const record = await prisma.oTPRecord.findFirst({
+      where: { userId, purpose: 'WITHDRAWAL', usedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!record || record.otpHash !== hashOTP(otp)) {
+      return error(res, 'OTP_INVALID', 'Invalid OTP', 400);
+    }
+    await prisma.oTPRecord.update({ where: { id: record.id }, data: { usedAt: new Date() } });
 
     const ref = generateReferenceId('WDR');
     await prisma.$transaction(async (tx) => {

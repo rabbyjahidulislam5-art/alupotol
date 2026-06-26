@@ -15,11 +15,32 @@ export default function QRPayPage() {
   const [merchantInfo, setMerchantInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [txResult, setTxResult] = useState<any>(null);
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
+
+  const requestOtp = async () => {
+    setOtpLoading(true);
+    setDevOtp(null);
+    try {
+      const res = await api.post('/wallet/request-otp', { purpose: 'QR_PAY' });
+      setOtpSent(true);
+      if (res.data.data?.devOtp) {
+        setDevOtp(res.data.data.devOtp);
+      }
+      show('OTP sent successfully', 'success');
+    } catch (err: any) {
+      show(err.response?.data?.error?.message || 'Failed to send OTP', 'error');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   const processPayment = async () => {
     setLoading(true);
     try {
-      const res = await api.post('/wallet/qr-pay', { qrPayload: qrData, amount: parseInt(amount) * 100 });
+      const res = await api.post('/wallet/qr-pay', { qrPayload: qrData, amount: parseInt(amount) * 100, otp });
       setTxResult(res.data.data);
       setStep('success');
       show('Payment successful!', 'success');
@@ -61,7 +82,7 @@ export default function QRPayPage() {
         )}
 
         {step === 'confirm' && (
-          <div className="card text-center">
+          <div className="card text-center space-y-4">
             <span className="text-4xl block mb-4">🏪</span>
             <h2 className="text-lg font-semibold">Confirm Payment</h2>
             <p className="text-gray-500 text-sm mb-6">Review the payment details</p>
@@ -69,9 +90,36 @@ export default function QRPayPage() {
               <p className="text-sm text-gray-500">Amount</p>
               <p className="text-3xl font-bold text-gray-900">৳{parseInt(amount || '0').toLocaleString()}</p>
             </div>
+
+            <div className="border-t border-gray-100 pt-4 space-y-3 text-left">
+              <label className="text-sm font-medium text-gray-700 block">OTP Verification</label>
+              <div className="flex gap-2">
+                <input
+                  className="input text-center text-xl font-bold tracking-[0.2em] flex-1"
+                  maxLength={6}
+                  placeholder="000000"
+                  value={otp}
+                  onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+                  disabled={!otpSent}
+                />
+                <button
+                  className="btn btn-secondary text-sm whitespace-nowrap"
+                  onClick={requestOtp}
+                  disabled={otpLoading}
+                >
+                  {otpLoading ? 'Sending...' : otpSent ? 'Resend OTP' : 'Send OTP'}
+                </button>
+              </div>
+              {devOtp && (
+                <div className="bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs p-2 rounded-lg text-center font-semibold">
+                  💡 [Dev Mode] Simulated OTP: {devOtp}
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-3">
-              <button className="btn btn-secondary flex-1" onClick={() => setStep('scan')}>Cancel</button>
-              <button className="btn btn-primary flex-1 btn-lg" onClick={processPayment} disabled={loading}>
+              <button className="btn btn-secondary flex-1" onClick={() => { setStep('scan'); setOtp(''); setOtpSent(false); setDevOtp(null); }}>Cancel</button>
+              <button className="btn btn-primary flex-1 btn-lg" onClick={processPayment} disabled={loading || !otpSent || otp.length !== 6}>
                 {loading ? <span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> : `Pay ৳${amount}`}
               </button>
             </div>
@@ -87,7 +135,7 @@ export default function QRPayPage() {
             <p className="text-gray-500 text-sm mb-1">Transaction ID: {txResult?.transaction?.referenceId || 'N/A'}</p>
             <p className="text-gray-500 text-sm mb-6">Amount: ৳{amount}</p>
             <div className="flex gap-3">
-              <button className="btn btn-primary flex-1" onClick={() => { setStep('scan'); setQrData(''); setAmount(''); }}>Scan Again</button>
+              <button className="btn btn-primary flex-1" onClick={() => { setStep('scan'); setQrData(''); setAmount(''); setOtp(''); setOtpSent(false); setDevOtp(null); }}>Scan Again</button>
               <a href="/student/wallet" className="btn btn-secondary flex-1">View Wallet</a>
             </div>
           </div>

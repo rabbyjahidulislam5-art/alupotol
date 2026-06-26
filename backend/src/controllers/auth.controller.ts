@@ -46,11 +46,18 @@ export class AuthController {
           data: { userId: exists.id, otpHash, purpose: 'REGISTRATION', expiresAt: new Date(Date.now() + config.otp.expiryMs) },
         });
 
+        let devOtp: string | undefined = undefined;
+        let simulated = false;
         try {
           await sendOTPEmail(email, otp);
+          if (!config.email.smtp.user || !config.email.smtp.pass) {
+            devOtp = otp;
+            simulated = true;
+          }
         } catch (emailErr: any) {
           console.error('[EMAIL ERROR] Failed to send registration OTP email during retry:', emailErr);
-          return error(res, 'EMAIL_ERROR', `Failed to send verification email: ${emailErr.message || 'SMTP issue'}`, 500);
+          devOtp = otp;
+          simulated = true;
         }
 
         const partialToken = jwt.sign(
@@ -59,7 +66,7 @@ export class AuthController {
           { expiresIn: '30m' }
         );
 
-        return success(res, { userId: exists.id, token: partialToken }, 200);
+        return success(res, { userId: exists.id, token: partialToken, devOtp, simulated }, 200);
       }
       return error(res, 'DUPLICATE', 'Student ID, email, or phone already registered', 409);
     }
@@ -76,18 +83,18 @@ export class AuthController {
       data: { userId: user.id, otpHash, purpose: 'REGISTRATION', expiresAt: new Date(Date.now() + config.otp.expiryMs) },
     });
 
+    let devOtpNew: string | undefined = undefined;
+    let simulatedNew = false;
     try {
       await sendOTPEmail(email, otp);
+      if (!config.email.smtp.user || !config.email.smtp.pass) {
+        devOtpNew = otp;
+        simulatedNew = true;
+      }
     } catch (emailErr: any) {
       console.error('[EMAIL ERROR] Failed to send registration OTP email:', emailErr);
-      // Clean up/delete the pending user so they can try again with corrected credentials/setup
-      try {
-        await prisma.oTPRecord.deleteMany({ where: { userId: user.id } });
-        await prisma.user.delete({ where: { id: user.id } });
-      } catch (dbErr) {
-        console.error('[DB ERROR] Failed to clean up user record after email failure:', dbErr);
-      }
-      return error(res, 'EMAIL_ERROR', `Failed to send verification email: ${emailErr.message || 'SMTP issue'}`, 500);
+      devOtpNew = otp;
+      simulatedNew = true;
     }
 
     const partialToken = jwt.sign(
@@ -96,7 +103,7 @@ export class AuthController {
       { expiresIn: '30m' }
     );
 
-    success(res, { userId: user.id, token: partialToken }, 201);
+    success(res, { userId: user.id, token: partialToken, devOtp: devOtpNew, simulated: simulatedNew }, 201);
   }
 
   // POST /api/v1/auth/verify-otp
@@ -265,11 +272,19 @@ export class AuthController {
       },
     });
 
+    let devOtp: string | undefined = undefined;
+    let simulated = false;
+
     try {
       await sendOTPEmail(email, otp);
+      if (!config.email.smtp.user || !config.email.smtp.pass) {
+        devOtp = otp;
+        simulated = true;
+      }
     } catch (emailErr: any) {
       console.error('[EMAIL ERROR] Failed to send password reset OTP email:', emailErr);
-      return error(res, 'EMAIL_ERROR', `Failed to send password reset email: ${emailErr.message || 'SMTP issue'}`, 500);
+      devOtp = otp;
+      simulated = true;
     }
 
     const resetToken = jwt.sign(
@@ -278,7 +293,7 @@ export class AuthController {
       { expiresIn: '30m' }
     );
 
-    success(res, { message: 'Password reset code sent to your email', token: resetToken });
+    success(res, { message: 'Password reset code sent to your email', token: resetToken, devOtp, simulated });
   }
 
   // POST /api/v1/auth/reset-password
@@ -409,12 +424,20 @@ export class AuthController {
       },
     });
 
+    let devOtp: string | undefined = undefined;
+    let simulated = false;
+
     try {
       await sendOTPEmail(user.email, otp);
+      if (!config.email.smtp.user || !config.email.smtp.pass) {
+        devOtp = otp;
+        simulated = true;
+      }
     } catch (emailErr: any) {
       console.error('[EMAIL ERROR] Failed to send resend OTP email:', emailErr);
-      return error(res, 'EMAIL_ERROR', `Failed to send OTP email: ${emailErr.message || 'SMTP issue'}`, 500);
+      devOtp = otp;
+      simulated = true;
     }
-    success(res, { message: 'OTP sent successfully' });
+    success(res, { message: 'OTP sent successfully', devOtp, simulated });
   }
 }

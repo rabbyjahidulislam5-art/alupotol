@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/hooks';
 import api from '@/lib/api';
@@ -12,6 +12,14 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const val = sessionStorage.getItem('dev_otp_reset');
+      if (val) setDevOtp(val);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +41,7 @@ export default function ResetPasswordPage() {
       });
       setDone(true);
       localStorage.removeItem('access_token');
+      sessionStorage.removeItem('dev_otp_reset');
       toast.show('Password reset successful!', 'success');
     } catch (err: any) {
       toast.show(err.response?.data?.error?.message || 'Failed to reset password', 'error');
@@ -80,6 +89,11 @@ export default function ResetPasswordPage() {
         </div>
 
         <div className="card">
+          {devOtp && (
+            <div className="bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm p-3 rounded-lg mb-4 text-center">
+              💡 [Dev Mode] Simulated OTP: <strong className="font-mono text-base">{devOtp}</strong>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-1">6-Digit Recovery Code</label>

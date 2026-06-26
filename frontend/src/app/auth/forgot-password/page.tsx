@@ -22,6 +22,11 @@ export default function ForgotPasswordPage() {
       if (res.data.data?.token) {
         localStorage.setItem('access_token', res.data.data.token);
       }
+      if (res.data.data?.devOtp) {
+        sessionStorage.setItem('dev_otp_reset', res.data.data.devOtp);
+      } else {
+        sessionStorage.removeItem('dev_otp_reset');
+      }
       setSent(true);
       toast.show('Recovery code sent to your email', 'success');
     } catch (err: any) {

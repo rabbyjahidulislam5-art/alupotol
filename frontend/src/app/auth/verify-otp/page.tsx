@@ -10,7 +10,15 @@ export default function VerifyOTPPage() {
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(300);
   const [resending, setResending] = useState(false);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const val = sessionStorage.getItem('dev_otp');
+      if (val) setDevOtp(val);
+    }
+  }, []);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -46,6 +54,7 @@ export default function VerifyOTPPage() {
     setLoading(true); setError('');
     try {
       await api.post('/auth/verify-otp', { otp: code });
+      sessionStorage.removeItem('dev_otp');
       router.push('/auth/kyc');
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'OTP verification failed');
@@ -56,10 +65,17 @@ export default function VerifyOTPPage() {
     if (countdown > 0 || resending) return;
     setResending(true);
     try {
-      await api.post('/auth/resend-otp', {});
+      const res = await api.post('/auth/resend-otp', {});
       setCountdown(300);
       setOtp(['', '', '', '', '', '']);
       setError('');
+      if (res.data.data?.devOtp) {
+        setDevOtp(res.data.data.devOtp);
+        sessionStorage.setItem('dev_otp', res.data.data.devOtp);
+      } else {
+        setDevOtp(null);
+        sessionStorage.removeItem('dev_otp');
+      }
       inputRefs.current[0]?.focus();
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Failed to resend OTP');
@@ -74,6 +90,12 @@ export default function VerifyOTPPage() {
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Verify OTP</h1>
         <p className="text-gray-500 text-sm mb-8">Enter the 6-digit code sent to your email</p>
+
+        {devOtp && (
+          <div className="bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm p-3 rounded-lg mb-4">
+            💡 [Dev Mode] Simulated OTP: <strong className="font-mono">{devOtp}</strong>
+          </div>
+        )}
 
         {error && <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-4 animate-shake">{error}</div>}
 

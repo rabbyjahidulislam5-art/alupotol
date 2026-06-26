@@ -26,6 +26,7 @@ export const verify2FASchema = z.object({
 export const topUpSchema = z.object({
   amount: z.number().int().min(5000).max(10000000), // 50 - 10000 BDT in paisa
   gateway: z.enum(['bkash', 'nagad', 'sslcommerz']),
+  otp: z.string().optional(),
 });
 
 export const transferSchema = z.object({
@@ -109,6 +110,7 @@ export const withdrawSchema = z.object({
   amount: z.number().int().positive(),
   destination: z.string(),
   password: z.string(),
+  otp: z.string().optional(),
 });
 
 export const supportTicketSchema = z.object({

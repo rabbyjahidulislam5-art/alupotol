@@ -9,6 +9,7 @@ const router = Router();
 const controller = new WalletController();
 
 router.get('/balance', authenticate, controller.getBalance.bind(controller));
+router.post('/request-otp', authenticate, controller.requestOTP.bind(controller));
 router.post('/topup/initiate', authenticate, requireRole('STUDENT'), paymentLimiter, validate(topUpSchema), controller.initiateTopUp.bind(controller));
 router.post('/transfer', authenticate, requireRole('STUDENT'), paymentLimiter, validate(transferSchema), controller.transfer.bind(controller));
 router.post('/qr-pay', authenticate, requireRole('STUDENT'), paymentLimiter, controller.qrPay.bind(controller));

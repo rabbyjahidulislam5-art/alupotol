@@ -29,7 +29,15 @@ export default function SignUpPage() {
     setLoading(true);
     try {
       const res = await api.post('/auth/register', { ...form, semester: form.semester ? parseInt(form.semester) : undefined });
-      if (res.data.data.token) { localStorage.setItem('access_token', res.data.data.token); router.push('/auth/verify-otp'); }
+      if (res.data.data.token) {
+        localStorage.setItem('access_token', res.data.data.token);
+        if (res.data.data.devOtp) {
+          sessionStorage.setItem('dev_otp', res.data.data.devOtp);
+        } else {
+          sessionStorage.removeItem('dev_otp');
+        }
+        router.push('/auth/verify-otp');
+      }
     } catch (err: any) {
       console.error("REGISTRATION ERROR:", err);
       const errMsg = err.response?.data?.error?.message || err.message || 'Registration failed';

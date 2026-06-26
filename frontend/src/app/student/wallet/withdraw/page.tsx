@@ -12,12 +12,33 @@ export default function WithdrawPage() {
   const { show, ToastComponent } = useToast();
   const [balance, setBalance] = useState(0);
   const [form, setForm] = useState({ amount: '', destination: '', password: '' });
-  const [step, setStep] = useState<'form' | 'success'>('form');
+  const [step, setStep] = useState<'form' | 'confirm' | 'success'>('form');
   const [loading, setLoading] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
 
   useEffect(() => {
     api.get('/wallet/balance').then(r => setBalance(r.data.data.balance || 0)).catch(() => {});
   }, []);
+
+  const requestOtp = async () => {
+    setOtpLoading(true);
+    setDevOtp(null);
+    try {
+      const res = await api.post('/wallet/request-otp', { purpose: 'WITHDRAWAL' });
+      setOtpSent(true);
+      if (res.data.data?.devOtp) {
+        setDevOtp(res.data.data.devOtp);
+      }
+      show('OTP sent successfully', 'success');
+    } catch (err: any) {
+      show(err.response?.data?.error?.message || 'Failed to send OTP', 'error');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   const handleWithdraw = async () => {
     setLoading(true);
@@ -26,6 +47,7 @@ export default function WithdrawPage() {
         amount: parseInt(form.amount) * 100,
         destination: form.destination,
         password: form.password,
+        otp,
       });
       setStep('success');
       show('Withdrawal requested!', 'success');
@@ -97,10 +119,54 @@ export default function WithdrawPage() {
             <button
               className="btn btn-primary w-full btn-lg"
               disabled={!form.amount || !form.destination || !form.password || parseInt(form.amount) < 100 || loading}
-              onClick={handleWithdraw}
+              onClick={() => setStep('confirm')}
             >
-              {loading ? 'Processing...' : 'Confirm Withdrawal'}
+              Continue
             </button>
+          </div>
+        )}
+
+        {step === 'confirm' && (
+          <div className="card text-center space-y-4">
+            <span className="text-4xl block mb-2">💸</span>
+            <h2 className="text-lg font-semibold">Confirm Withdrawal</h2>
+            <div className="bg-gray-50 rounded-xl p-6 mb-6 text-left space-y-2">
+              <p className="text-sm text-gray-500">Amount: <strong className="text-gray-900 text-lg">৳{parseInt(form.amount).toLocaleString()}</strong></p>
+              <p className="text-sm text-gray-500">Destination: <strong className="text-gray-900">{form.destination}</strong></p>
+            </div>
+
+            <div className="border-t border-gray-100 pt-4 space-y-3 text-left">
+              <label className="text-sm font-medium text-gray-700 block">OTP Verification</label>
+              <div className="flex gap-2">
+                <input
+                  className="input text-center text-xl font-bold tracking-[0.2em] flex-1"
+                  maxLength={6}
+                  placeholder="000000"
+                  value={otp}
+                  onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+                  disabled={!otpSent}
+                />
+                <button
+                  className="btn btn-secondary text-sm whitespace-nowrap"
+                  onClick={requestOtp}
+                  disabled={otpLoading}
+                >
+                  {otpLoading ? 'Sending...' : otpSent ? 'Resend OTP' : 'Send OTP'}
+                </button>
+              </div>
+              {devOtp && (
+                <div className="bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs p-2 rounded-lg text-center font-semibold">
+                  💡 [Dev Mode] Simulated OTP: {devOtp}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button className="btn btn-secondary flex-1" onClick={() => { setStep('form'); setOtp(''); setOtpSent(false); setDevOtp(null); }}>Cancel</button>
+              <button className="btn btn-primary flex-1" onClick={handleWithdraw} disabled={loading || !otpSent || otp.length !== 6}>
+                {loading ? 'Processing...' : 'Confirm'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -112,7 +178,7 @@ export default function WithdrawPage() {
               ৳{form.amount} will be sent to your account within 24–48 hours.
             </p>
             <button className="btn btn-primary mt-6" onClick={() => {
-              setStep('form'); setForm({ amount: '', destination: '', password: '' });
+              setStep('form'); setForm({ amount: '', destination: '', password: '' }); setOtp(''); setOtpSent(false); setDevOtp(null);
             }}>
               Done
             </button>
