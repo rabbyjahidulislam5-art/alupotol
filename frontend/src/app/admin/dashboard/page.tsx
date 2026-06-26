@@ -45,8 +45,8 @@ export default function AdminDashboard() {
               { icon: '🛡️', label: 'Security', href: '/admin/security' },
               { icon: '⚙️', label: 'Settings', href: '/admin/settings' },
             ].map(a => (
-              <a key={a.href} href={a.href} className="bg-gray-50 rounded-xl p-4 flex items-center gap-3 hover:bg-blue-50 transition-colors">
-                <span className="text-xl">{a.icon}</span><span className="text-sm font-medium">{a.label}</span>
+              <a key={a.href} href={a.href} className="bg-gray-50 rounded-xl p-4 flex items-center gap-3 hover:bg-indigo-50/80 hover:text-indigo-600 transition-colors border border-transparent hover:border-indigo-100">
+                <span className="text-xl">{a.icon}</span><span className="text-sm font-semibold">{a.label}</span>
               </a>
             ))}
           </div>

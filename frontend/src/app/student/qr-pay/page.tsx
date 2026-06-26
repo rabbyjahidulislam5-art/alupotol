@@ -36,11 +36,11 @@ export default function QRPayPage() {
       <div className="max-w-lg mx-auto">
         {step === 'scan' && (
           <div className="card text-center">
-            <div className="w-64 h-64 mx-auto border-4 border-blue-600 rounded-2xl flex items-center justify-center bg-gray-50 mb-6 relative">
-              <div className="absolute top-2 left-2 w-8 h-8 border-t-4 border-l-4 border-blue-600 rounded-tl-lg"></div>
-              <div className="absolute top-2 right-2 w-8 h-8 border-t-4 border-r-4 border-blue-600 rounded-tr-lg"></div>
-              <div className="absolute bottom-2 left-2 w-8 h-8 border-b-4 border-l-4 border-blue-600 rounded-bl-lg"></div>
-              <div className="absolute bottom-2 right-2 w-8 h-8 border-b-4 border-r-4 border-blue-600 rounded-br-lg"></div>
+            <div className="w-64 h-64 mx-auto border-4 border-indigo-600 rounded-2xl flex items-center justify-center bg-gray-50 mb-6 relative">
+              <div className="absolute top-2 left-2 w-8 h-8 border-t-4 border-l-4 border-indigo-600 rounded-tl-lg"></div>
+              <div className="absolute top-2 right-2 w-8 h-8 border-t-4 border-r-4 border-indigo-600 rounded-tr-lg"></div>
+              <div className="absolute bottom-2 left-2 w-8 h-8 border-b-4 border-l-4 border-indigo-600 rounded-bl-lg"></div>
+              <div className="absolute bottom-2 right-2 w-8 h-8 border-b-4 border-r-4 border-indigo-600 rounded-br-lg"></div>
               <div className="text-center">
                 <span className="text-4xl block mb-2">📷</span>
                 <p className="text-sm text-gray-500">Camera Scanner</p>

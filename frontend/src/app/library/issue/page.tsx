@@ -63,9 +63,9 @@ export default function IssuePage() {
             <button className="btn btn-primary" onClick={searchStudent}>Search</button>
           </div>
           {student && (
-            <div className="mt-4 p-4 bg-blue-50 rounded-xl">
+            <div className="mt-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100/50">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">{student.fullName?.charAt(0)}</div>
+                <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-600">{student.fullName?.charAt(0)}</div>
                 <div><p className="font-semibold">{student.fullName}</p><p className="text-sm text-gray-500">{student.studentId} • {student.department}</p></div>
               </div>
             </div>
@@ -81,7 +81,7 @@ export default function IssuePage() {
           {books.length > 0 && (
             <div className="space-y-2">
               {books.filter(b => b.availableQty > 0).map(b => (
-                <div key={b.id} onClick={() => setSelectedBook(b)} className={`p-3 rounded-lg cursor-pointer border-2 transition-all ${selectedBook?.id === b.id ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}>
+                <div key={b.id} onClick={() => setSelectedBook(b)} className={`p-3 rounded-lg cursor-pointer border-2 transition-all ${selectedBook?.id === b.id ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-gray-200 hover:border-indigo-300 hover:text-indigo-600'}`}>
                   <div className="flex justify-between"><span className="font-medium">{b.title}</span><span className="text-xs text-gray-500">{b.availableQty} available</span></div>
                   <p className="text-sm text-gray-500">{b.author} • {b.isbn}</p>
                 </div>
