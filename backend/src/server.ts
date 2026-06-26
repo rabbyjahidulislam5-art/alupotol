@@ -22,4 +22,12 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('[FATAL] Uncaught Exception thrown:', error);
+});
+
 export { server };

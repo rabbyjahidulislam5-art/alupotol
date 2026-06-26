@@ -16,10 +16,55 @@ export class AuthController {
     const exists = await prisma.user.findFirst({
       where: { OR: [{ studentId }, { email }, { phone }] },
     });
-    if (exists) return error(res, 'DUPLICATE', 'Student ID, email, or phone already registered', 409);
+
+    if (exists) {
+      if (exists.status === 'PENDING' && exists.studentId === studentId) {
+        // If the registration is pending and it's the same Student ID, allow updating and retrying.
+        // This prevents the user from being locked out if email sending failed initially.
+        const passwordHash = await hashPassword(password);
+        const otp = (!config.email.smtp.user || !config.email.smtp.pass) ? '123456' : generateOTP();
+        const otpHash = hashOTP(otp);
+
+        await prisma.user.update({
+          where: { id: exists.id },
+          data: {
+            email,
+            phone,
+            fullName,
+            passwordHash,
+            department,
+            semester: parseInt(semester, 10),
+          },
+        });
+
+        await prisma.oTPRecord.updateMany({
+          where: { userId: exists.id, purpose: 'REGISTRATION', usedAt: null },
+          data: { usedAt: new Date() },
+        });
+
+        await prisma.oTPRecord.create({
+          data: { userId: exists.id, otpHash, purpose: 'REGISTRATION', expiresAt: new Date(Date.now() + config.otp.expiryMs) },
+        });
+
+        try {
+          await sendOTPEmail(email, otp);
+        } catch (emailErr: any) {
+          console.error('[EMAIL ERROR] Failed to send registration OTP email during retry:', emailErr);
+          return error(res, 'EMAIL_ERROR', `Failed to send verification email: ${emailErr.message || 'SMTP issue'}`, 500);
+        }
+
+        const partialToken = jwt.sign(
+          { sub: exists.id, role: 'PENDING', sessionId: 'registration' },
+          config.jwt.accessTokenSecret,
+          { expiresIn: '30m' }
+        );
+
+        return success(res, { userId: exists.id, token: partialToken }, 200);
+      }
+      return error(res, 'DUPLICATE', 'Student ID, email, or phone already registered', 409);
+    }
 
     const passwordHash = await hashPassword(password);
-    // Use 123456 for testing if SMTP is not configured, otherwise generate a random one
     const otp = (!config.email.smtp.user || !config.email.smtp.pass) ? '123456' : generateOTP();
     const otpHash = hashOTP(otp);
 
@@ -31,8 +76,19 @@ export class AuthController {
       data: { userId: user.id, otpHash, purpose: 'REGISTRATION', expiresAt: new Date(Date.now() + config.otp.expiryMs) },
     });
 
-    await sendOTPEmail(email, otp);
-    // In production also send SMS to phone
+    try {
+      await sendOTPEmail(email, otp);
+    } catch (emailErr: any) {
+      console.error('[EMAIL ERROR] Failed to send registration OTP email:', emailErr);
+      // Clean up/delete the pending user so they can try again with corrected credentials/setup
+      try {
+        await prisma.oTPRecord.deleteMany({ where: { userId: user.id } });
+        await prisma.user.delete({ where: { id: user.id } });
+      } catch (dbErr) {
+        console.error('[DB ERROR] Failed to clean up user record after email failure:', dbErr);
+      }
+      return error(res, 'EMAIL_ERROR', `Failed to send verification email: ${emailErr.message || 'SMTP issue'}`, 500);
+    }
 
     const partialToken = jwt.sign(
       { sub: user.id, role: 'PENDING', sessionId: 'registration' },
@@ -209,7 +265,12 @@ export class AuthController {
       },
     });
 
-    await sendOTPEmail(email, otp);
+    try {
+      await sendOTPEmail(email, otp);
+    } catch (emailErr: any) {
+      console.error('[EMAIL ERROR] Failed to send password reset OTP email:', emailErr);
+      return error(res, 'EMAIL_ERROR', `Failed to send password reset email: ${emailErr.message || 'SMTP issue'}`, 500);
+    }
 
     const resetToken = jwt.sign(
       { sub: user.id, role: 'RESET', sessionId: 'password-reset' },
@@ -292,7 +353,7 @@ export class AuthController {
 
     if (!req.user?.id) return error(res, 'UNAUTHORIZED', 'Not authenticated', 401);
 
-    const docs = [];
+    const docs: any[] = [];
     if (docType && fileUrl) {
       docs.push({ userId: req.user.id, docType, fileUrl, status: 'SUBMITTED' });
     }
@@ -348,7 +409,12 @@ export class AuthController {
       },
     });
 
-    await sendOTPEmail(user.email, otp);
+    try {
+      await sendOTPEmail(user.email, otp);
+    } catch (emailErr: any) {
+      console.error('[EMAIL ERROR] Failed to send resend OTP email:', emailErr);
+      return error(res, 'EMAIL_ERROR', `Failed to send OTP email: ${emailErr.message || 'SMTP issue'}`, 500);
+    }
     success(res, { message: 'OTP sent successfully' });
   }
 }

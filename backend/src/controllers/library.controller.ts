@@ -53,7 +53,7 @@ export class LibraryController {
 
   // GET /api/v1/library/books/:isbn
   async getBook(req: AuthRequest, res: any) {
-    const book = await prisma.book.findUnique({ where: { isbn: req.params.isbn }, include: { issues: { include: { student: true }, where: { returnedAt: null } } } });
+    const book = await prisma.book.findUnique({ where: { isbn: req.params.isbn as string }, include: { issues: { include: { student: true }, where: { returnedAt: null } } } });
     if (!book) return error(res, 'NOT_FOUND', 'Book not found', 404);
     success(res, book);
   }
@@ -173,13 +173,14 @@ export class LibraryController {
 
   // POST /api/v1/library/overdue/:id/remind
   async sendOverdueReminder(req: AuthRequest, res: any) {
-    const issue = await prisma.bookIssue.findUnique({ where: { id: req.params.id }, include: { student: true, book: true } });
+    const issueId = req.params.id as string;
+    const issue = await prisma.bookIssue.findUnique({ where: { id: issueId }, include: { student: true, book: true } });
     if (!issue) return error(res, 'NOT_FOUND', 'Issue not found', 404);
 
-    await prisma.bookIssue.update({ where: { id: req.params.id }, data: { reminderCount: { increment: 1 }, lastReminderAt: new Date() } });
+    await prisma.bookIssue.update({ where: { id: issueId }, data: { reminderCount: { increment: 1 }, lastReminderAt: new Date() } });
 
     await prisma.notification.create({
-      data: { userId: issue.studentId, type: 'LIBRARY', title: 'Overdue Book Reminder', message: `"${issue.book.title}" is overdue. Please return it as soon as possible.`, channel: 'IN_APP', status: 'PENDING' },
+      data: { userId: issue.studentId, type: 'LIBRARY', title: 'Overdue Book Reminder', message: `"${(issue as any).book.title}" is overdue. Please return it as soon as possible.`, channel: 'IN_APP', status: 'PENDING' },
     });
 
     success(res, { message: 'Reminder sent' });

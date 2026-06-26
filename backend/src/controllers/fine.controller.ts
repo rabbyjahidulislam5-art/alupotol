@@ -16,7 +16,7 @@ export class FineController {
 
   // POST /api/v1/fines/:id/pay
   async payFine(req: AuthRequest, res: any) {
-    const fineId = req.params.id;
+    const fineId = req.params.id as string;
     const userId = req.user!.id;
 
     const fine = await prisma.fine.findUnique({ where: { id: fineId } });
@@ -79,19 +79,26 @@ export class FineController {
       const lockedWallet = await tx.wallet.findUnique({ where: { id: wallet.id } });
       if (!lockedWallet || lockedWallet.balance < totalAmount) throw new Error('Insufficient');
 
-      await tx.wallet.update({ where: { id: wallet.id }, data: { balance: { decrement: totalAmount } } });
+      let currentBalance = lockedWallet.balance;
 
       for (const fine of activeFines) {
+        const balanceBefore = currentBalance;
+        const balanceAfter = currentBalance - fine.accumulatedAmount;
+        currentBalance = balanceAfter;
+
         const ref = generateReferenceId('FIN');
         const txn = await tx.transaction.create({
           data: {
             referenceId: ref, walletId: wallet.id, type: 'FINE_PAYMENT', direction: 'DEBIT',
-            amount: fine.accumulatedAmount, status: 'COMPLETED', gateway: 'WALLET',
+            amount: fine.accumulatedAmount, balanceBefore, balanceAfter,
+            status: 'COMPLETED', gateway: 'WALLET',
             description: `Fine Payment: ${fine.description}`, initiatedBy: userId,
           },
         });
         await tx.fine.update({ where: { id: fine.id }, data: { status: 'PAID', paidAt: new Date(), paymentTransactionId: txn.id } });
       }
+
+      await tx.wallet.update({ where: { id: wallet.id }, data: { balance: currentBalance } });
 
       await tx.advisingClearance.upsert({
         where: { studentId: userId },
@@ -105,7 +112,7 @@ export class FineController {
 
   // POST /api/v1/fines/:id/appeal
   async appealFine(req: AuthRequest, res: any) {
-    const fineId = req.params.id;
+    const fineId = req.params.id as string;
     const { statement, evidenceUrls } = req.body;
 
     const fine = await prisma.fine.findUnique({ where: { id: fineId } });

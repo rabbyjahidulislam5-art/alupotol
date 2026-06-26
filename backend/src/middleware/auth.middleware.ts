@@ -70,7 +70,7 @@ export async function refreshAccessToken(req: Request, res: Response, next: Next
   const newAccessToken = jwt.sign(
     { sub: session.userId, role: session.user.role, sessionId: session.id },
     config.jwt.accessTokenSecret,
-    { expiresIn: config.jwt.accessTokenExpiry }
+    { expiresIn: config.jwt.accessTokenExpiry as any }
   );
 
   const newRefreshToken = require('crypto').randomBytes(32).toString('hex');
@@ -104,7 +104,7 @@ export async function createSession(userId: string, deviceInfo: string, ipAddres
   const accessToken = jwt.sign(
     { sub: userId, role: (await prisma.user.findUnique({ where: { id: userId } }))!.role, sessionId: session.id },
     config.jwt.accessTokenSecret,
-    { expiresIn: config.jwt.accessTokenExpiry }
+    { expiresIn: config.jwt.accessTokenExpiry as any }
   );
 
   return { accessToken, refreshToken, session };

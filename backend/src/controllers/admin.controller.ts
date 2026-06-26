@@ -49,9 +49,18 @@ export class AdminController {
 
   // GET /api/v1/admin/students/:id
   async getStudentDetail(req: AuthRequest, res: any) {
+    const studentId = req.params.id as string;
     const user = await prisma.user.findUnique({
-      where: { id: req.params.id },
-      include: { wallet: true, fines: true, kycDocuments: true, transactions: { take: 20 } },
+      where: { id: studentId },
+      include: {
+        wallet: {
+          include: {
+            transactions: { take: 20, orderBy: { createdAt: 'desc' } }
+          }
+        },
+        fines: true,
+        kycDocuments: true
+      },
     });
     if (!user) return error(res, 'NOT_FOUND', 'Student not found', 404);
     success(res, user);
@@ -76,7 +85,7 @@ export class AdminController {
 
   // PUT /api/v1/admin/kyc/:id/decision
   async kycDecision(req: AuthRequest, res: any) {
-    const userId = req.params.id;
+    const userId = req.params.id as string;
     const { decision, rejectionReason, notes } = req.body;
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -85,7 +94,7 @@ export class AdminController {
     if (decision === 'APPROVED') {
       await prisma.$transaction(async (tx) => {
         await tx.user.update({ where: { id: userId }, data: { status: 'ACTIVE', kycStatus: 'APPROVED' } });
-        await tx.kycDocument.updateMany({ where: { userId }, data: { status: 'APPROVED', reviewedBy: req.user!.id, reviewedAt: new Date() } });
+        await tx.kYCDocument.updateMany({ where: { userId }, data: { status: 'APPROVED', reviewedBy: req.user!.id, reviewedAt: new Date() } });
         await tx.wallet.create({ data: { userId, status: 'ACTIVE' } });
       });
 
@@ -94,7 +103,7 @@ export class AdminController {
       });
     } else {
       await prisma.user.update({ where: { id: userId }, data: { kycStatus: 'REJECTED', status: 'KYC_PENDING' } });
-      await prisma.kycDocument.updateMany({ where: { userId }, data: { status: 'REJECTED', reviewedBy: req.user!.id, reviewedAt: new Date(), rejectionReason } });
+      await prisma.kYCDocument.updateMany({ where: { userId }, data: { status: 'REJECTED', reviewedBy: req.user!.id, reviewedAt: new Date(), rejectionReason } });
     }
 
     await prisma.auditLog.create({ data: { userId: req.user!.id, action: `KYC_${decision}`, entityType: 'User', entityId: userId, newValue: { decision, notes } } });
@@ -164,8 +173,9 @@ export class AdminController {
   // POST /api/v1/admin/fines/:id/waive
   async waiveFine(req: AuthRequest, res: any) {
     const { reason, notes } = req.body;
+    const fineId = req.params.id as string;
     await prisma.fine.update({
-      where: { id: req.params.id },
+      where: { id: fineId },
       data: { status: 'WAIVED', waivedAt: new Date(), waiverReason: reason },
     });
     success(res, { message: 'Fine waived' });
@@ -174,17 +184,18 @@ export class AdminController {
   // POST /api/v1/admin/students/:id/suspend
   async suspendStudent(req: AuthRequest, res: any) {
     const { reason, duration } = req.body;
-    const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+    const studentId = req.params.id as string;
+    const user = await prisma.user.findUnique({ where: { id: studentId } });
     if (!user) return error(res, 'NOT_FOUND', 'Student not found', 404);
 
-    await prisma.user.update({ where: { id: req.params.id }, data: { status: 'SUSPENDED' } });
-    await prisma.wallet.updateMany({ where: { userId: req.params.id }, data: { status: 'SUSPENDED' } });
+    await prisma.user.update({ where: { id: studentId }, data: { status: 'SUSPENDED' } });
+    await prisma.wallet.updateMany({ where: { userId: studentId }, data: { status: 'SUSPENDED' } });
 
     const { revokeAllSessions } = await import('../middleware/auth.middleware');
-    await revokeAllSessions(req.params.id);
+    await revokeAllSessions(studentId);
 
-    await prisma.auditLog.create({ data: { userId: req.user!.id, action: 'SUSPEND_STUDENT', entityType: 'User', entityId: req.params.id, newValue: { reason, duration } } });
-    await prisma.notification.create({ data: { userId: req.params.id, type: 'SECURITY', title: 'Account Suspended', message: `Your account has been suspended. Reason: ${reason}`, channel: 'IN_APP', status: 'PENDING' } });
+    await prisma.auditLog.create({ data: { userId: req.user!.id, action: 'SUSPEND_STUDENT', entityType: 'User', entityId: studentId, newValue: { reason, duration } } });
+    await prisma.notification.create({ data: { userId: studentId, type: 'SECURITY', title: 'Account Suspended', message: `Your account has been suspended. Reason: ${reason}`, channel: 'IN_APP', status: 'PENDING' } });
 
     success(res, { message: 'Student suspended' });
   }
@@ -260,7 +271,8 @@ export class AdminController {
   // POST /api/v1/admin/transaction/:id/override
   async overrideTransaction(req: AuthRequest, res: any) {
     const { action, reason } = req.body;
-    const tx = await prisma.transaction.findUnique({ where: { id: req.params.id } });
+    const transactionId = req.params.id as string;
+    const tx = await prisma.transaction.findUnique({ where: { id: transactionId } });
     if (!tx) return error(res, 'NOT_FOUND', 'Transaction not found', 404);
 
     await prisma.transaction.update({ where: { id: tx.id }, data: { flagged: action === 'flag', flagReason: reason } });
