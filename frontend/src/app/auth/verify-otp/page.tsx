@@ -9,6 +9,7 @@ export default function VerifyOTPPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(300);
+  const [resending, setResending] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -29,6 +30,16 @@ export default function VerifyOTPPage() {
     if (e.key === 'Backspace' && !otp[index] && index > 0) inputRefs.current[index - 1]?.focus();
   };
 
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pastedData.length === 6) {
+      const newOtp = pastedData.split('');
+      setOtp(newOtp);
+      inputRefs.current[5]?.focus();
+    }
+  };
+
   const handleSubmit = async () => {
     const code = otp.join('');
     if (code.length !== 6) return setError('Enter all 6 digits');
@@ -42,11 +53,17 @@ export default function VerifyOTPPage() {
   };
 
   const handleResend = async () => {
-    if (countdown > 0) return;
+    if (countdown > 0 || resending) return;
+    setResending(true);
     try {
-      await api.post('/auth/register', {}); // Would need proper resend endpoint
+      await api.post('/auth/resend-otp', {});
       setCountdown(300);
-    } catch { setError('Failed to resend OTP'); }
+      setOtp(['', '', '', '', '', '']);
+      setError('');
+      inputRefs.current[0]?.focus();
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || 'Failed to resend OTP');
+    } finally { setResending(false); }
   };
 
   return (
@@ -56,11 +73,11 @@ export default function VerifyOTPPage() {
           <span className="text-3xl">📧</span>
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Verify OTP</h1>
-        <p className="text-gray-500 text-sm mb-8">Enter the 6-digit code sent to your email and phone</p>
+        <p className="text-gray-500 text-sm mb-8">Enter the 6-digit code sent to your email</p>
 
         {error && <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-4 animate-shake">{error}</div>}
 
-        <div className="flex justify-center gap-3 mb-6">
+        <div className="flex justify-center gap-3 mb-6" onPaste={handlePaste}>
           {otp.map((digit, i) => (
             <input key={i} ref={el => { inputRefs.current[i] = el; }}
               className="w-12 h-14 text-center text-xl font-bold border-2 border-gray-200 rounded-xl focus:border-blue-600 focus:outline-none transition-colors"
@@ -78,7 +95,9 @@ export default function VerifyOTPPage() {
 
         <p className="text-sm text-gray-500 mt-6">
           {countdown > 0 ? `Resend in ${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, '0')}` :
-            <button className="text-blue-600 font-medium" onClick={handleResend}>Resend OTP</button>}
+            <button className="text-blue-600 font-medium" onClick={handleResend} disabled={resending}>
+              {resending ? 'Sending...' : 'Resend OTP'}
+            </button>}
         </p>
       </div>
     </div>

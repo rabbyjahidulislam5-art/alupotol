@@ -13,7 +13,7 @@ export default function SignUpPage() {
   const validate = () => {
     const e: Record<string, string> = {};
     if (!/^\d{4}-\d+-\d+-\d+$/.test(form.studentId)) e.studentId = 'Format: YYYY-S-DDD';
-    if (!form.email.endsWith('@ewubd.edu') && !form.email.endsWith('@std.ewubd.edu')) e.email = 'Use university email';
+    if (!form.email.endsWith('@std.ewubd.edu')) e.email = 'Use university email (@std.ewubd.edu)';
     if (!/^(?:\+880|01)\d{9}$/.test(form.phone)) e.phone = 'Invalid BD phone';
     if (form.password.length < 8) e.password = 'Min 8 characters';
     if (!/[A-Z]/.test(form.password)) e.password += ', uppercase';
@@ -62,7 +62,7 @@ export default function SignUpPage() {
 
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">University Email</label>
-            <input className={`input ${errors.email ? 'input-error' : ''}`} placeholder="name@ewubd.edu" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+            <input className={`input ${errors.email ? 'input-error' : ''}`} placeholder="name@std.ewubd.edu" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
             {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
           </div>
 

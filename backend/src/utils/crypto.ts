@@ -17,7 +17,8 @@ export function generateOTP(): string {
 }
 
 export function hashOTP(otp: string): string {
-  return crypto.createHmac('sha256', 'otp-pepper-change-me').update(otp).digest('hex');
+  const pepper = process.env.OTP_PEPPER || process.env.OTP_HMAC_SECRET || 'otp-pepper-change-me';
+  return crypto.createHmac('sha256', pepper).update(otp).digest('hex');
 }
 
 export function hashToken(token: string): string {

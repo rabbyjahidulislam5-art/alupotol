@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { hashPassword, comparePassword, generateOTP, hashOTP, generateReferenceId, generateToken } from '../utils/crypto';
-import { getTOTPToken, verifyTOTP, generateTOTPQRDataURL, generateRecoveryCodes } from '../utils/otp';
+import { getTOTPToken, verifyTOTP, generateTOTPQRDataURL, generateRecoveryCodes, generateTOTPSecret } from '../utils/otp';
 import { sendOTPEmail } from '../utils/email';
 import { success, error } from '../utils/response';
 import { createSession, revokeAllSessions, AuthRequest } from '../middleware/auth.middleware';
@@ -311,5 +311,44 @@ export class AuthController {
     });
 
     success(res, { message: 'KYC documents uploaded successfully', status: 'SUBMITTED' });
+  }
+
+  // POST /api/v1/auth/resend-otp
+  async resendOTP(req: AuthRequest, res: Response) {
+    const userId = req.user?.id;
+    if (!userId) return error(res, 'UNAUTHORIZED', 'Auth required', 401);
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return error(res, 'NOT_FOUND', 'User not found', 404);
+
+    // Check cooldown — prevent spamming
+    const recentOTP = await prisma.oTPRecord.findFirst({
+      where: { userId, usedAt: null, createdAt: { gt: new Date(Date.now() - config.otp.resendCooldownMs) } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (recentOTP) {
+      return error(res, 'COOLDOWN', 'Please wait before requesting a new OTP', 429);
+    }
+
+    // Invalidate all previous unused OTPs
+    await prisma.oTPRecord.updateMany({
+      where: { userId, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    const otp = (!config.email.smtp.user || !config.email.smtp.pass) ? '123456' : generateOTP();
+    const otpHash = hashOTP(otp);
+
+    await prisma.oTPRecord.create({
+      data: {
+        userId,
+        otpHash,
+        purpose: user.status === 'PENDING' ? 'REGISTRATION' : 'PASSWORD_RESET',
+        expiresAt: new Date(Date.now() + config.otp.expiryMs),
+      },
+    });
+
+    await sendOTPEmail(user.email, otp);
+    success(res, { message: 'OTP sent successfully' });
   }
 }

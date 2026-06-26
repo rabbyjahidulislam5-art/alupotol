@@ -6,7 +6,6 @@ import api from '@/lib/api';
 
 export default function ResetPasswordPage() {
   const toast = useToast();
-  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -26,12 +25,14 @@ export default function ResetPasswordPage() {
     }
     setLoading(true);
     try {
+      // The access_token was stored by the forgot-password page
+      // The Bearer token is sent automatically by the api interceptor
       await api.post('/auth/reset-password', {
-        email,
         otp: code,
-        newPassword: password,
+        password: password,
       });
       setDone(true);
+      localStorage.removeItem('access_token');
       toast.show('Password reset successful!', 'success');
     } catch (err: any) {
       toast.show(err.response?.data?.error?.message || 'Failed to reset password', 'error');
@@ -81,18 +82,6 @@ export default function ResetPasswordPage() {
         <div className="card">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Email Address</label>
-              <input
-                type="email"
-                className="input"
-                placeholder="student@ewubd.edu"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-              />
-            </div>
-
-            <div>
               <label className="text-sm font-medium text-gray-700 block mb-1">6-Digit Recovery Code</label>
               <input
                 className="input text-center text-2xl tracking-[0.5em] font-bold"
@@ -101,6 +90,7 @@ export default function ResetPasswordPage() {
                 value={code}
                 onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
                 required
+                autoFocus
               />
               <p className="text-xs text-gray-400 mt-1">Enter the code sent to your email</p>
             </div>
@@ -157,7 +147,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               className="btn btn-primary w-full btn-lg"
-              disabled={!email || code.length !== 6 || !password || password !== confirmPassword || loading}
+              disabled={code.length !== 6 || !password || password !== confirmPassword || loading}
             >
               {loading ? 'Resetting...' : 'Reset Password'}
             </button>

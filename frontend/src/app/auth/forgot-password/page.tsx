@@ -1,10 +1,12 @@
 'use client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useToast } from '@/components/hooks';
 import api from '@/lib/api';
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,7 +17,11 @@ export default function ForgotPasswordPage() {
     if (!email) return;
     setLoading(true);
     try {
-      await api.post('/auth/forgot-password', { email });
+      const res = await api.post('/auth/forgot-password', { email });
+      // Store the reset token so /reset-password can use it
+      if (res.data.data?.token) {
+        localStorage.setItem('access_token', res.data.data.token);
+      }
       setSent(true);
       toast.show('Recovery code sent to your email', 'success');
     } catch (err: any) {
@@ -36,14 +42,14 @@ export default function ForgotPasswordPage() {
           {!sent ? (
             <>
               <h2 className="text-lg font-semibold text-gray-900 mb-2">Reset your password</h2>
-              <p className="text-sm text-gray-500 mb-6">Enter your registered email address. We&apos;ll send a recovery code to reset your password.</p>
+              <p className="text-sm text-gray-500 mb-6">Enter your registered email address. We&apos;ll send a 6-digit recovery code to reset your password.</p>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700 block mb-1">Email Address</label>
                   <input
                     type="email"
                     className="input"
-                    placeholder="student@ewubd.edu"
+                    placeholder="student@std.ewubd.edu"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     required
@@ -70,9 +76,9 @@ export default function ForgotPasswordPage() {
               <p className="text-sm text-gray-400 mb-6">
                 The code expires in 5 minutes. Check your spam folder if you don&apos;t see it.
               </p>
-              <Link href="/auth/reset-password" className="btn btn-primary w-full btn-lg block text-center">
+              <button onClick={() => router.push('/auth/reset-password')} className="btn btn-primary w-full btn-lg">
                 Enter Recovery Code
-              </Link>
+              </button>
               <button
                 className="text-sm text-blue-600 hover:text-blue-800 mt-3 block mx-auto"
                 onClick={() => { setSent(false); setEmail(''); }}

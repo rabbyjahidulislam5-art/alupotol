@@ -19,5 +19,6 @@ router.post('/reset-password', validate(resetPasswordSchema), requirePartialAuth
 router.post('/setup-2fa', authenticate, controller.setup2FA.bind(controller));
 router.post('/enable-2fa', authenticate, validate(verify2FASchema), controller.enable2FA.bind(controller));
 router.post('/kyc/upload', authenticate, controller.uploadKYC.bind(controller));
+router.post('/resend-otp', otpLimiter, requirePartialAuth, controller.resendOTP.bind(controller));
 
 export default router;

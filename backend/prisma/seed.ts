@@ -26,10 +26,10 @@ async function main() {
   // ── Create Users ──────────────────────────────────────────
   const [student, admin, librarian, shopOwner] = await Promise.all([
     prisma.user.upsert({
-      where: { email: 'student@ewubd.edu' },
+      where: { email: 'student@std.ewubd.edu' },
       update: {},
       create: {
-        email: 'student@ewubd.edu',
+        email: 'student@std.ewubd.edu',
         fullName: 'Tanvir Ahmed',
         studentId: '2023-2-60-001',
         passwordHash,
@@ -42,10 +42,10 @@ async function main() {
       },
     }),
     prisma.user.upsert({
-      where: { email: 'admin@ewubd.edu' },
+      where: { email: 'admin@std.ewubd.edu' },
       update: {},
       create: {
-        email: 'admin@ewubd.edu',
+        email: 'admin@std.ewubd.edu',
         fullName: 'Dr. Rahman Chowdhury',
         studentId: 'ADMIN-001',
         passwordHash,
@@ -57,10 +57,10 @@ async function main() {
       },
     }),
     prisma.user.upsert({
-      where: { email: 'library@ewubd.edu' },
+      where: { email: 'library@std.ewubd.edu' },
       update: {},
       create: {
-        email: 'library@ewubd.edu',
+        email: 'library@std.ewubd.edu',
         fullName: 'Nusrat Jahan',
         studentId: 'LIB-001',
         passwordHash,
@@ -72,10 +72,10 @@ async function main() {
       },
     }),
     prisma.user.upsert({
-      where: { email: 'shop@ewubd.edu' },
+      where: { email: 'shop@std.ewubd.edu' },
       update: {},
       create: {
-        email: 'shop@ewubd.edu',
+        email: 'shop@std.ewubd.edu',
         fullName: 'Karim Uddin',
         studentId: 'SHOP-001',
         passwordHash,
@@ -174,10 +174,10 @@ async function main() {
   console.log('\n─────────────────────────────────────────');
   console.log('🌱 Seed complete! Demo credentials:');
   console.log('─────────────────────────────────────────');
-  console.log('👨‍🎓 Student:   student@ewubd.edu / Password123!');
-  console.log('👨‍💼 Admin:     admin@ewubd.edu   / Password123!');
-  console.log('📚 Library:  library@ewubd.edu / Password123!');
-  console.log('🏪 Shop:     shop@ewubd.edu    / Password123!');
+  console.log('👨‍🎓 Student:   student@std.ewubd.edu / Password123!');
+  console.log('👨‍💼 Admin:     admin@std.ewubd.edu   / Password123!');
+  console.log('📚 Library:  library@std.ewubd.edu / Password123!');
+  console.log('🏪 Shop:     shop@std.ewubd.edu    / Password123!');
   console.log('─────────────────────────────────────────\n');
 }
 

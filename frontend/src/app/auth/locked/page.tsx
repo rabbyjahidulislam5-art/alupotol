@@ -44,7 +44,7 @@ export default function AccountLockedPage() {
                 <input
                   type="email"
                   className="input"
-                  placeholder="student@ewubd.edu"
+                  placeholder="student@std.ewubd.edu"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
@@ -72,7 +72,7 @@ export default function AccountLockedPage() {
           <div className="mt-6 pt-4 border-t border-gray-100 space-y-2">
             <p className="text-xs text-gray-400">
               If you believe your account was locked in error, please contact the IT help desk at{' '}
-              <a href="mailto:it@ewubd.edu" className="text-blue-600 hover:underline">it@ewubd.edu</a>
+              <a href="mailto:it@ewubd.edu" className="text-blue-600 hover:underline">it@std.ewubd.edu</a>
             </p>
           </div>
         </div>
